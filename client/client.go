@@ -1,0 +1,93 @@
+package main
+
+import (
+    "bufio"
+    "encoding/binary"
+    "encoding/json"
+    "fmt"
+    "io"
+    "net"
+    "os"
+)
+
+type message struct {
+    Name string
+    Content string
+}
+
+//channel 只声明不创建 使用是会出问题的
+//var quitSemaphore chan bool 
+var (
+    quitSemaphore=make(chan bool)
+)
+
+var name string
+
+//客户端意外短线
+func main() {
+    //quitSemaphore =make(chan bool)
+
+    var tcpAddr *net.TCPAddr
+    tcpAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:9999")
+
+    conn, _ := net.DialTCP("tcp", nil, tcpAddr)
+    defer conn.Close()
+    fmt.Println("connected!")
+    fmt.Print("输入昵称：")
+    fmt.Scanln(&name)
+
+    //创建两个线程，一个收，一个发送
+    go sendThread(conn)
+    go onMessageRecived(conn)
+   
+    //阻塞主线程
+    <-quitSemaphore
+}
+func sendThread(conn *net.TCPConn){
+    var msg message=message{Name:name}
+
+    input := bufio.NewScanner(os.Stdin)
+    headbuf:=make([]byte,4)
+    for input.Scan(){
+        //读取消息内容
+        msg.Content=input.Text()
+        //填充bodybuf
+        bodybuf,err:=json.Marshal(msg)
+        if err!=nil {
+            fmt.Println("json序列化失败")
+            return
+        }
+        //求出body的len
+        msglen := len(bodybuf)
+        //填充headuf
+        binary.BigEndian.PutUint32(headbuf,uint32(msglen))
+
+        if err!=nil {
+            return
+        }
+        conn.Write(headbuf)
+        conn.Write(bodybuf)
+        //fmt.Println("head:",headbuf,"headlen:",4)
+        //fmt.Println("body:",bodybuf,"bodylen:",msglen)
+    }
+}
+
+func onMessageRecived(conn *net.TCPConn) {
+    headbuf:=make([]byte,4)
+    datalen:=uint32(0)
+    for {
+        _, err := io.ReadFull(conn, headbuf)
+        if err != nil {
+            break;
+        }
+        datalen = binary.BigEndian.Uint32(headbuf)
+        data := make([]byte, datalen)
+        _, err = io.ReadFull(conn, data)
+        if err != nil {
+            break
+        }
+        var msg message
+        json.Unmarshal(data,&msg)
+        fmt.Println(msg.Name,":",msg.Content)
+    }
+}
