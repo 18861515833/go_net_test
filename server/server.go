@@ -12,32 +12,17 @@ var (
 	client =make([] *net.TCPConn,0,100)
 )
 
-func main1(){
-	data:=[5]int{1,2,3,4,5}
-	s1:=data[:]
-	s2:=data[1:]
-	data[4]=0
-	fmt.Println(data)
-	fmt.Println(s1)
-	fmt.Println(s2)
-}
-func init(){
-	fmt.Println("init")
-	fmt.Print()
-}
-
 func main(){
 	var tcpAddr *net.TCPAddr
 
 	//resolve 解析
 	tcpAddr,_=net.ResolveTCPAddr("tcp","127.0.0.1:9999")
-
+	//监听
 	tcpListener,_:=net.ListenTCP("tcp",tcpAddr)
 
 	//推迟执行，防止资源泄露
 	defer tcpListener.Close()
 
-	//while(true) for(;;)
 	for {
 		tcpConn,err:=tcpListener.AcceptTCP()
 		//如果发生错误，继续监听，不用管
@@ -85,26 +70,4 @@ func tcpPipe(index int){
 			client[i].Write(data)
 		}
 	}
-	/*
-	for{
-		message,err:=reader.ReadString('\n')
-		//如果出错，直接return
-		if err !=nil{
-			return
-		}
-		//打印recv的消息
-		fmt.Println(string(message))
-		//重新包装recv的消息
-		//msg:=time.Now().String()+"\n"
-		mes:="聊天消息："+string(message)
-		b:=[]byte(mes)
-		//发送包装完成的消息
-		//conn.Write(b)
-		
-		//给client中的每个客户端都发送消息
-		for i:=0;i<len(client);i++ {
-			client[i].Write(b)
-		}
-	}
-	*/
 }

@@ -19,19 +19,18 @@ type message struct {
 //var quitSemaphore chan bool 
 var (
     quitSemaphore=make(chan bool)
+
+    name string
 )
 
-var name string
-
-//客户端意外短线
 func main() {
-    //quitSemaphore =make(chan bool)
-
+    //先创建addr
     var tcpAddr *net.TCPAddr
     tcpAddr, _ = net.ResolveTCPAddr("tcp", "127.0.0.1:9999")
-
+    //连接
     conn, _ := net.DialTCP("tcp", nil, tcpAddr)
     defer conn.Close()
+
     fmt.Println("connected!")
     fmt.Print("输入昵称：")
     fmt.Scanln(&name)
@@ -41,7 +40,12 @@ func main() {
     go onMessageRecived(conn)
    
     //阻塞主线程
-    <-quitSemaphore
+    res:= <-quitSemaphore
+    if res{
+        fmt.Println("客户端异常，程序退出")
+    } else {
+        fmt.Println("服务器异常，程序退出")
+    }
 }
 func sendThread(conn *net.TCPConn){
     var msg message=message{Name:name}
@@ -70,6 +74,7 @@ func sendThread(conn *net.TCPConn){
         //fmt.Println("head:",headbuf,"headlen:",4)
         //fmt.Println("body:",bodybuf,"bodylen:",msglen)
     }
+    quitSemaphore<-true
 }
 
 func onMessageRecived(conn *net.TCPConn) {
@@ -90,4 +95,5 @@ func onMessageRecived(conn *net.TCPConn) {
         json.Unmarshal(data,&msg)
         fmt.Println(msg.Name,":",msg.Content)
     }
+    quitSemaphore<-false
 }
