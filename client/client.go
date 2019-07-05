@@ -15,7 +15,7 @@ type message struct {
     Content string
 }
 
-//channel 只声明不创建 使用是会出问题的
+//channel 只声明不make  使用是会出问题的
 //var quitSemaphore chan bool 
 var (
     quitSemaphore=make(chan bool)
