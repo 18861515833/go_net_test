@@ -3,17 +3,13 @@ package main
 import (
 	"bufio"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"os"
+	"../gen/pb"
+	"github.com/golang/protobuf/proto"
 )
-
-type message struct {
-	Name    string
-	Content string
-}
 
 //channel 只声明不make  使用是会出问题的
 //var quitSemaphore chan bool
@@ -48,17 +44,19 @@ func main() {
 	}
 }
 func sendThread(conn *net.TCPConn) {
-	var msg message = message{Name: name}
-
+	//var msg message = message{Name: name}
+	var msg =&pb.Message{Name:name}
 	input := bufio.NewScanner(os.Stdin)
 	headbuf := make([]byte, 4)
 	for input.Scan() {
 		//读取消息内容
 		msg.Content = input.Text()
 		//填充bodybuf
-		bodybuf, err := json.Marshal(msg)
+		//bodybuf, err := json.Marshal(msg)
+		bodybuf,err:=proto.Marshal(msg)
 		if err != nil {
-			fmt.Println("json序列化失败")
+			//fmt.Println("json序列化失败")
+			fmt.Println("protobuf序列化失败")
 			return
 		}
 		//求出body的len
@@ -91,8 +89,10 @@ func onMessageRecived(conn *net.TCPConn) {
 		if err != nil {
 			break
 		}
-		var msg message
-		json.Unmarshal(data, &msg)
+		//var msg message
+		//json.Unmarshal(data, &msg)
+		var msg pb.Message
+		proto.Unmarshal(data,&msg)
 		fmt.Println(msg.Name, ":", msg.Content)
 	}
 	quitSemaphore <- false
